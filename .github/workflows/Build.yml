@@ -1,0 +1,40 @@
+name: Build Jar & Upload Artifact
+
+on:
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 运行环境（Ubuntu 最新版，稳定且快速）
+
+    steps:
+      # 步骤1：拉取仓库代码到 CI 服务器
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 步骤2：设置 JDK 8（适配你的项目依赖，必须和本地开发版本一致）
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin' # 开源免费的 JDK 发行版，兼容 Oracle JDK 8
+          cache: gradle # 缓存 Gradle 依赖，加速后续构建
+
+      # 步骤3：授权 Gradle 脚本可执行（Linux 环境必需）
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      # 步骤4：编译项目（自动生成 spider.jar 和 spider.jar.md5）
+      - name: Build with Gradle
+        run: ./gradlew build # 执行构建命令，触发 jar 打包和 MD5 生成
+
+      # 步骤5：上传产物（Jar 包 + MD5 文件）
+      - name: Upload Jar & MD5
+        uses: actions/upload-artifact@v4
+        with:
+          name: spider-jar-with-md5 # 上传后的产物包名称（下载时可见）
+          path: |
+            build/libs/spider.jar       # 要上传的 Jar 包路径
+            build/libs/spider.jar.md5  # 要上传的 MD5 文件路径
+          retention-days: 30 # 产物保留 30 天（可按需修改，最多 90 天）
+          if-no-files-found: error # 若找不到文件，构建失败（避免漏传）
